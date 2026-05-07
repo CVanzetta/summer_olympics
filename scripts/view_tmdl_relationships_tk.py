@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 import subprocess
+import os
 import tkinter as tk
 from dataclasses import dataclass
 from pathlib import Path
@@ -217,6 +218,7 @@ class RelationshipViewer(tk.Tk):
         export_frame.pack(fill="x", pady=(8, 0))
         ttk.Button(export_frame, text="JSON", command=self.export_json).pack(side="left", padx=(0, 4))
         ttk.Button(export_frame, text="CSV", command=self.export_csv).pack(side="left")
+        ttk.Button(export_frame, text="⛵ Bateau", command=self.show_boat).pack(side="left", padx=(8, 0))
 
         bottom = ttk.Label(self, textvariable=self.status_var, padding=(12, 4), font=("Consolas", 9))
         bottom.pack(fill="x", background="#e8e8e8")
@@ -454,6 +456,54 @@ class RelationshipViewer(tk.Tk):
         self.detail.delete("1.0", tk.END)
         self.detail.insert("1.0", text)
         self.detail.configure(state="disabled")
+
+    def show_boat(self) -> None:
+        """Open a window showing the ASCII boat and allow generating/opening the SVG."""
+        repo_root = Path(__file__).resolve().parents[1]
+        txt_path = repo_root / "boat.txt"
+        svg_path = repo_root / "boat.svg"
+
+        if not txt_path.exists():
+            messagebox.showerror("Erreur", f"Fichier bateau introuvable: {txt_path}")
+            return
+
+        content = txt_path.read_text(encoding="utf-8")
+
+        win = tk.Toplevel(self)
+        win.title("Bateau ASCII")
+        win.geometry("520x320")
+
+        text = tk.Text(win, wrap="none", font=("Consolas", 12))
+        text.pack(fill="both", expand=True, padx=8, pady=8)
+        text.insert("1.0", content)
+        text.configure(state="disabled")
+
+        btns = ttk.Frame(win)
+        btns.pack(fill="x", padx=8, pady=(0, 8))
+
+        def gen_and_open_svg():
+            try:
+                subprocess.run(["python", str(repo_root / "scripts" / "boat.py")], check=True)
+            except subprocess.CalledProcessError as exc:
+                messagebox.showerror("Erreur", f"Échec génération SVG:\n{exc}")
+                return
+            if svg_path.exists():
+                try:
+                    os.startfile(str(svg_path))
+                except Exception as exc:
+                    messagebox.showinfo("Info", f"SVG généré: {svg_path}")
+
+        def open_svg():
+            if svg_path.exists():
+                try:
+                    os.startfile(str(svg_path))
+                except Exception as exc:
+                    messagebox.showerror("Erreur", f"Impossible d'ouvrir SVG:\n{exc}")
+            else:
+                messagebox.showinfo("Info", "SVG non trouvé. Cliquez sur 'Générer SVG' pour le créer.")
+
+        ttk.Button(btns, text="Générer SVG", command=gen_and_open_svg).pack(side="left")
+        ttk.Button(btns, text="Ouvrir SVG", command=open_svg).pack(side="left", padx=(8, 0))
 
 
 def main() -> int:
