@@ -13,6 +13,9 @@ import tkinter as tk
 from dataclasses import dataclass
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
+import json
+import csv
+from io import StringIO
 
 
 
@@ -130,18 +133,23 @@ class RelationshipViewer(tk.Tk):
         self.refresh_relationships()
 
     def _build_ui(self) -> None:
-        header = ttk.Frame(self, padding=12)
-        header.pack(fill="x")
+        self.style = ttk.Style()
+        self.style.theme_use('clam')
+        self.style.configure('Treeview', rowheight=24, font=('Consolas', 10))
+        self.style.configure('Treeview.Heading', font=('Consolas', 11, 'bold'))
 
-        ttk.Label(header, text="Dossier modèle").pack(side="left")
+        header = ttk.Frame(self, padding=12)
+        header.pack(fill="x", background="#f0f0f0")
+
+        ttk.Label(header, text="Dossier modèle", font=("Consolas", 10, "bold")).pack(side="left")
         root_entry = ttk.Entry(header, textvariable=self.model_root, width=72)
         root_entry.pack(side="left", padx=(10, 8), fill="x", expand=True)
-        ttk.Button(header, text="Parcourir", command=self.choose_folder).pack(side="left", padx=(0, 8))
+        ttk.Button(header, text="Parcourir", command=self.choose_folder).pack(side="left", padx=(0, 4))
         ttk.Button(header, text="Rafraîchir", command=self.refresh_relationships).pack(side="left")
 
-        search_bar = ttk.Frame(self, padding=(12, 0, 12, 8))
+        search_bar = ttk.Frame(self, padding=(12, 8, 12, 8))
         search_bar.pack(fill="x")
-        ttk.Label(search_bar, text="Filtrer").pack(side="left")
+        ttk.Label(search_bar, text="🔍 Filtrer").pack(side="left")
         search_entry = ttk.Entry(search_bar, textvariable=self.search_var)
         search_entry.pack(side="left", padx=(10, 8), fill="x", expand=True)
         search_entry.bind("<KeyRelease>", lambda _event: self.apply_filter())
@@ -156,11 +164,11 @@ class RelationshipViewer(tk.Tk):
 
         columns = ("file", "from", "to", "active", "cross")
         self.tree = ttk.Treeview(left, columns=columns, show="headings", selectmode="browse")
-        self.tree.heading("file", text="Fichier")
-        self.tree.heading("from", text="From")
-        self.tree.heading("to", text="To")
-        self.tree.heading("active", text="Active")
-        self.tree.heading("cross", text="Cross filter")
+        self.tree.heading("file", text="📁 Fichier")
+        self.tree.heading("from", text="📤 From")
+        self.tree.heading("to", text="📥 To")
+        self.tree.heading("active", text="✓ Active")
+        self.tree.heading("cross", text="↔ Cross filter")
         self.tree.column("file", width=360, anchor="w")
         self.tree.column("from", width=220, anchor="w")
         self.tree.column("to", width=220, anchor="w")
@@ -173,13 +181,13 @@ class RelationshipViewer(tk.Tk):
         self.tree.configure(yscrollcommand=tree_scroll.set)
         tree_scroll.pack(fill="y", side="right")
 
-        ttk.Label(right, text="Détails", padding=(0, 0, 0, 6)).pack(anchor="w")
+        ttk.Label(right, text="📋 Détails", padding=(0, 0, 0, 6), font=("Consolas", 10, "bold")).pack(anchor="w")
 
-        self.detail = tk.Text(right, wrap="word", height=12, font=("Consolas", 10))
+        self.detail = tk.Text(right, wrap="word", height=12, font=("Consolas", 10), bg="#f9f9f9")
         self.detail.pack(fill="both", expand=True)
         self.detail.configure(state="disabled")
 
-        edit_frame = ttk.LabelFrame(right, text="Modifier", padding=8)
+        edit_frame = ttk.LabelFrame(right, text="✎ Modifier", padding=8)
         edit_frame.pack(fill="x", pady=(8, 0))
 
         ttk.Label(edit_frame, text="Cross Filtering:").grid(row=0, column=0, sticky="w", padx=(0, 8))
@@ -202,11 +210,16 @@ class RelationshipViewer(tk.Tk):
 
         btn_frame = ttk.Frame(edit_frame)
         btn_frame.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(8, 0))
-        ttk.Button(btn_frame, text="Apply Changes", command=self.apply_changes).pack(side="left", padx=(0, 4))
-        ttk.Button(btn_frame, text="Dry Run", command=self.dry_run_changes).pack(side="left")
+        ttk.Button(btn_frame, text="✓ Apply", command=self.apply_changes).pack(side="left", padx=(0, 4))
+        ttk.Button(btn_frame, text="👁 Dry Run", command=self.dry_run_changes).pack(side="left")
 
-        bottom = ttk.Label(self, textvariable=self.status_var, padding=(12, 4))
-        bottom.pack(fill="x")
+        export_frame = ttk.LabelFrame(right, text="📤 Export", padding=8)
+        export_frame.pack(fill="x", pady=(8, 0))
+        ttk.Button(export_frame, text="JSON", command=self.export_json).pack(side="left", padx=(0, 4))
+        ttk.Button(export_frame, text="CSV", command=self.export_csv).pack(side="left")
+
+        bottom = ttk.Label(self, textvariable=self.status_var, padding=(12, 4), font=("Consolas", 9))
+        bottom.pack(fill="x", background="#e8e8e8")
 
     def choose_folder(self) -> None:
         folder = filedialog.askdirectory(title="Choisir le dossier du semantic model")
@@ -383,6 +396,58 @@ class RelationshipViewer(tk.Tk):
             text.configure(state="disabled")
         except subprocess.CalledProcessError as exc:
             messagebox.showerror("Erreur", f"Dry run échoué:\n{exc.stderr}")
+
+    def export_json(self) -> None:
+        if not self.relationships:
+            messagebox.showwarning("Attention", "Aucune relation à exporter.")
+            return
+        
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".json",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            initialfile="relationships.json"
+        )
+        if not file_path:
+            return
+        
+        data = []
+        for rel in self.relationships:
+            data.append({
+                "name": rel.name,
+                "file": str(rel.file_path),
+                "from_column": rel.from_column,
+                "to_column": rel.to_column,
+                "is_active": rel.is_active,
+                "cross_filtering_behavior": rel.cross_filtering_behavior,
+            })
+        
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        
+        self.status_var.set(f"✓ Exported {len(data)} relations to {Path(file_path).name}")
+        messagebox.showinfo("Succès", f"{len(data)} relations exported to {Path(file_path).name}")
+
+    def export_csv(self) -> None:
+        if not self.relationships:
+            messagebox.showwarning("Attention", "Aucune relation à exporter.")
+            return
+        
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".csv",
+            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+            initialfile="relationships.csv"
+        )
+        if not file_path:
+            return
+        
+        with open(file_path, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(["Name", "File", "From Column", "To Column", "Active", "Cross Filter"])
+            for rel in self.relationships:
+                writer.writerow([rel.name, rel.file_path, rel.from_column, rel.to_column, rel.is_active, rel.cross_filtering_behavior])
+        
+        self.status_var.set(f"✓ Exported {len(self.relationships)} relations to {Path(file_path).name}")
+        messagebox.showinfo("Succès", f"{len(self.relationships)} relations exported to {Path(file_path).name}")
 
     def _set_detail_text(self, text: str) -> None:
         self.detail.configure(state="normal")
