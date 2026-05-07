@@ -118,6 +118,12 @@ class RelationshipViewer(tk.Tk):
         self.title("TMDL Relationship Viewer")
         self.geometry("1200x720")
         self.minsize(1000, 600)
+        # Menu bar with Tools -> Bateau to always access the boat viewer
+        self.menu = tk.Menu(self)
+        self.config(menu=self.menu)
+        tools_menu = tk.Menu(self.menu, tearoff=0)
+        tools_menu.add_command(label="⛵ Bateau", command=self.show_boat)
+        self.menu.add_cascade(label="Outils", menu=tools_menu)
 
         default_root = Path(__file__).resolve().parents[2] / "summer_olympics_2024_dashboard.SemanticModel"
         if not default_root.exists():
