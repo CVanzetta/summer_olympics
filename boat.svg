@@ -1,19 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="600" height="300" viewBox="0 0 600 300">
-  <rect width="100%" height="100%" fill="#87ceeb"/>
-  <!-- Mer -->
-  <rect y="200" width="100%" height="100" fill="#1e90ff" />
+<svg width="300" height="220" viewBox="0 0 300 220" xmlns="http://www.w3.org/2000/svg">
+  <!-- Ciel -->
+  <rect width="300" height="220" fill="#dff6ff"/>
 
-  <!-- Coque -->
-  <path d="M120 200 C160 170, 440 170, 480 200 L430 230 L170 230 Z" fill="#8b4513" stroke="#5a2e0c" stroke-width="3"/>
+  <!-- Soleil -->
+  <circle cx="245" cy="45" r="25" fill="#ffd166"/>
 
-  <!-- Pont -->
-  <rect x="240" y="150" width="120" height="30" fill="#deb887" stroke="#8b5a2b"/>
+  <!-- Voile -->
+  <polygon points="145,35 145,130 75,130" fill="#ffffff" stroke="#333" stroke-width="3"/>
+  <polygon points="155,55 155,130 215,130" fill="#f4f4f4" stroke="#333" stroke-width="3"/>
 
   <!-- Mât -->
-  <rect x="298" y="60" width="4" height="90" fill="#654321"/>
-  <polygon points="302,65 360,100 302,120" fill="#ffffff" stroke="#cccccc"/>
+  <line x1="150" y1="30" x2="150" y2="150" stroke="#333" stroke-width="5"/>
 
-  <!-- Détails -->
-  <circle cx="180" cy="210" r="6" fill="#000" />
-  <circle cx="420" cy="210" r="6" fill="#000" />
+  <!-- Coque -->
+  <path d="M55 135 H245 L220 175 H85 Z" fill="#8d5524" stroke="#333" stroke-width="3"/>
+
+  <!-- Mer -->
+  <path d="M0 175 Q25 160 50 175 T100 175 T150 175 T200 175 T250 175 T300 175 V220 H0 Z" fill="#118ab2"/>
+
+  <!-- Vagues -->
+  <path d="M20 190 Q35 180 50 190 T80 190" fill="none" stroke="#ffffff" stroke-width="3"/>
+  <path d="M120 200 Q135 190 150 200 T180 200" fill="none" stroke="#ffffff" stroke-width="3"/>
+  <path d="M220 190 Q235 180 250 190 T280 190" fill="none" stroke="#ffffff" stroke-width="3"/>
 </svg>
