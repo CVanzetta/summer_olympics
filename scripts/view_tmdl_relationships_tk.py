@@ -125,6 +125,9 @@ class RelationshipViewer(tk.Tk):
         tools_menu.add_command(label="⛵ Bateau", command=self.show_boat)
         self.menu.add_cascade(label="Outils", menu=tools_menu)
 
+        # Raccourci clavier Ctrl+B pour ouvrir le bateau
+        self.bind('<Control-b>', lambda _e: self.show_boat())
+
         default_root = Path(__file__).resolve().parents[2] / "summer_olympics_2024_dashboard.SemanticModel"
         if not default_root.exists():
             default_root = Path(__file__).resolve().parents[2] / "projet.SemanticModel"
@@ -146,13 +149,17 @@ class RelationshipViewer(tk.Tk):
         self.style.configure('Treeview.Heading', font=('Consolas', 11, 'bold'))
 
         header = ttk.Frame(self, padding=12)
-        header.pack(fill="x", background="#f0f0f0")
+        header.pack(fill="x")
+        header.configure(style="Header.TFrame")
+        self.style.configure("Header.TFrame", background="#f0f0f0")
 
         ttk.Label(header, text="Dossier modèle", font=("Consolas", 10, "bold")).pack(side="left")
         root_entry = ttk.Entry(header, textvariable=self.model_root, width=72)
         root_entry.pack(side="left", padx=(10, 8), fill="x", expand=True)
         ttk.Button(header, text="Parcourir", command=self.choose_folder).pack(side="left", padx=(0, 4))
         ttk.Button(header, text="Rafraîchir", command=self.refresh_relationships).pack(side="left")
+        # Bouton Bateau visible dans l'en-tête pour accès rapide
+        ttk.Button(header, text="⛵ Bateau", command=self.show_boat).pack(side="left", padx=(8, 0))
 
         search_bar = ttk.Frame(self, padding=(12, 8, 12, 8))
         search_bar.pack(fill="x")
@@ -227,7 +234,9 @@ class RelationshipViewer(tk.Tk):
         ttk.Button(export_frame, text="⛵ Bateau", command=self.show_boat).pack(side="left", padx=(8, 0))
 
         bottom = ttk.Label(self, textvariable=self.status_var, padding=(12, 4), font=("Consolas", 9))
-        bottom.pack(fill="x", background="#e8e8e8")
+        bottom.pack(fill="x")
+        bottom.configure(style="Footer.TLabel")
+        self.style.configure("Footer.TLabel", background="#e8e8e8")
 
     def choose_folder(self) -> None:
         folder = filedialog.askdirectory(title="Choisir le dossier du semantic model")
