@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="300" viewBox="0 0 600 300">
+  <rect width="100%" height="100%" fill="#87ceeb"/>
+  <!-- Mer -->
+  <rect y="200" width="100%" height="100" fill="#1e90ff" />
+
+  <!-- Coque -->
+  <path d="M120 200 C160 170, 440 170, 480 200 L430 230 L170 230 Z" fill="#8b4513" stroke="#5a2e0c" stroke-width="3"/>
+
+  <!-- Pont -->
+  <rect x="240" y="150" width="120" height="30" fill="#deb887" stroke="#8b5a2b"/>
+
+  <!-- Mât -->
+  <rect x="298" y="60" width="4" height="90" fill="#654321"/>
+  <polygon points="302,65 360,100 302,120" fill="#ffffff" stroke="#cccccc"/>
+
+  <!-- Détails -->
+  <circle cx="180" cy="210" r="6" fill="#000" />
+  <circle cx="420" cy="210" r="6" fill="#000" />
+</svg>
