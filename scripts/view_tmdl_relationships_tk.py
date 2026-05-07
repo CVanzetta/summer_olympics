@@ -415,7 +415,8 @@ class RelationshipViewer(tk.Tk):
             messagebox.showerror("Erreur", f"Dry run échoué:\n{exc.stderr}")
 
     def export_json(self) -> None:
-        if not self.relationships:
+        items = self.filtered_relationships or self.relationships
+        if not items:
             messagebox.showwarning("Attention", "Aucune relation à exporter.")
             return
         
@@ -428,24 +429,30 @@ class RelationshipViewer(tk.Tk):
             return
         
         data = []
-        for rel in self.relationships:
-            data.append({
-                "name": rel.name,
-                "file": str(rel.file_path),
-                "from_column": rel.from_column,
-                "to_column": rel.to_column,
-                "is_active": rel.is_active,
-                "cross_filtering_behavior": rel.cross_filtering_behavior,
-            })
+        for rel in items:
+            data.append(
+                {
+                    "name": rel.name,
+                    "file": str(rel.file_path),
+                    "start_line": rel.start_line,
+                    "end_line": rel.end_line,
+                    "from_column": rel.from_column,
+                    "to_column": rel.to_column,
+                    "is_active": rel.is_active,
+                    "cross_filtering": rel.cross_filtering,
+                    "security_filtering": rel.security_filtering,
+                }
+            )
         
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
         
-        self.status_var.set(f"✓ Exported {len(data)} relations to {Path(file_path).name}")
-        messagebox.showinfo("Succès", f"{len(data)} relations exported to {Path(file_path).name}")
+        self.status_var.set(f"✓ Exported {len(data)} relation(s) to {Path(file_path).name}")
+        messagebox.showinfo("Succès", f"{len(data)} relation(s) exported to {Path(file_path).name}")
 
     def export_csv(self) -> None:
-        if not self.relationships:
+        items = self.filtered_relationships or self.relationships
+        if not items:
             messagebox.showwarning("Attention", "Aucune relation à exporter.")
             return
         
@@ -459,12 +466,34 @@ class RelationshipViewer(tk.Tk):
         
         with open(file_path, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
-            writer.writerow(["Name", "File", "From Column", "To Column", "Active", "Cross Filter"])
-            for rel in self.relationships:
-                writer.writerow([rel.name, rel.file_path, rel.from_column, rel.to_column, rel.is_active, rel.cross_filtering_behavior])
+            writer.writerow([
+                "Name",
+                "File",
+                "Start Line",
+                "End Line",
+                "From Column",
+                "To Column",
+                "Active",
+                "Cross Filtering",
+                "Security Filtering",
+            ])
+            for rel in items:
+                writer.writerow(
+                    [
+                        rel.name,
+                        rel.file_path,
+                        rel.start_line,
+                        rel.end_line,
+                        rel.from_column,
+                        rel.to_column,
+                        rel.is_active,
+                        rel.cross_filtering,
+                        rel.security_filtering,
+                    ]
+                )
         
-        self.status_var.set(f"✓ Exported {len(self.relationships)} relations to {Path(file_path).name}")
-        messagebox.showinfo("Succès", f"{len(self.relationships)} relations exported to {Path(file_path).name}")
+        self.status_var.set(f"✓ Exported {len(items)} relation(s) to {Path(file_path).name}")
+        messagebox.showinfo("Succès", f"{len(items)} relation(s) exported to {Path(file_path).name}")
 
     def _set_detail_text(self, text: str) -> None:
         self.detail.configure(state="normal")
