@@ -8,10 +8,12 @@ declarations, and shows them in a table plus a details panel.
 from __future__ import annotations
 
 import re
+import subprocess
 import tkinter as tk
 from dataclasses import dataclass
 from pathlib import Path
-from tkinter import filedialog, ttk
+from tkinter import filedialog, messagebox, ttk
+
 
 
 TOP_LEVEL_PREFIXES = (
@@ -173,9 +175,35 @@ class RelationshipViewer(tk.Tk):
 
         ttk.Label(right, text="Détails", padding=(0, 0, 0, 6)).pack(anchor="w")
 
-        self.detail = tk.Text(right, wrap="word", height=20, font=("Consolas", 10))
+        self.detail = tk.Text(right, wrap="word", height=12, font=("Consolas", 10))
         self.detail.pack(fill="both", expand=True)
         self.detail.configure(state="disabled")
+
+        edit_frame = ttk.LabelFrame(right, text="Modifier", padding=8)
+        edit_frame.pack(fill="x", pady=(8, 0))
+
+        ttk.Label(edit_frame, text="Cross Filtering:").grid(row=0, column=0, sticky="w", padx=(0, 8))
+        self.cross_filter_var = tk.StringVar(value="")
+        cross_combo = ttk.Combobox(
+            edit_frame,
+            textvariable=self.cross_filter_var,
+            values=("oneDirection", "bothDirections"),
+            state="readonly",
+            width=20,
+        )
+        cross_combo.grid(row=0, column=1, sticky="w")
+
+        ttk.Label(edit_frame, text="Is Active:").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=(6, 0))
+        self.is_active_var = tk.StringVar(value="")
+        active_combo = ttk.Combobox(
+            edit_frame, textvariable=self.is_active_var, values=("true", "false"), state="readonly", width=20
+        )
+        active_combo.grid(row=1, column=1, sticky="w", pady=(6, 0))
+
+        btn_frame = ttk.Frame(edit_frame)
+        btn_frame.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(8, 0))
+        ttk.Button(btn_frame, text="Apply Changes", command=self.apply_changes).pack(side="left", padx=(0, 4))
+        ttk.Button(btn_frame, text="Dry Run", command=self.dry_run_changes).pack(side="left")
 
         bottom = ttk.Label(self, textvariable=self.status_var, padding=(12, 4))
         bottom.pack(fill="x")
@@ -276,6 +304,85 @@ class RelationshipViewer(tk.Tk):
             item.raw_block.rstrip(),
         ]
         self._set_detail_text("\n".join(details))
+        self.cross_filter_var.set(item.cross_filtering or "")
+        self.is_active_var.set(item.is_active or "")
+
+    def apply_changes(self) -> None:
+        selection = self.tree.selection()
+        if not selection:
+            messagebox.showwarning("Attention", "Aucune relation sélectionnée.")
+            return
+
+        index = int(selection[0])
+        if index >= len(self.filtered_relationships):
+            return
+
+        item = self.filtered_relationships[index]
+        cross_filter = self.cross_filter_var.get().strip()
+        is_active = self.is_active_var.get().strip()
+
+        if not cross_filter and not is_active:
+            messagebox.showinfo("Info", "Aucun changement à appliquer.")
+            return
+
+        script = Path(__file__).resolve().parents[0] / "update_tmdl_relationship.py"
+        if not script.exists():
+            messagebox.showerror("Erreur", f"Script non trouvé: {script}")
+            return
+
+        cmd = ["python", str(script), str(item.file_path), item.name]
+        if cross_filter:
+            cmd.extend(["--cross-filtering", cross_filter])
+        if is_active:
+            cmd.extend(["--is-active", is_active])
+
+        try:
+            subprocess.run(cmd, check=True, capture_output=True, text=True)
+            messagebox.showinfo("Succès", f"Relation '{item.name}' modifiée avec succès!")
+            self.refresh_relationships()
+        except subprocess.CalledProcessError as exc:
+            messagebox.showerror("Erreur", f"Modification échouée:\n{exc.stderr}")
+
+    def dry_run_changes(self) -> None:
+        selection = self.tree.selection()
+        if not selection:
+            messagebox.showwarning("Attention", "Aucune relation sélectionnée.")
+            return
+
+        index = int(selection[0])
+        if index >= len(self.filtered_relationships):
+            return
+
+        item = self.filtered_relationships[index]
+        cross_filter = self.cross_filter_var.get().strip()
+        is_active = self.is_active_var.get().strip()
+
+        if not cross_filter and not is_active:
+            messagebox.showinfo("Info", "Aucun changement à prévisualiser.")
+            return
+
+        script = Path(__file__).resolve().parents[0] / "update_tmdl_relationship.py"
+        if not script.exists():
+            messagebox.showerror("Erreur", f"Script non trouvé: {script}")
+            return
+
+        cmd = ["python", str(script), str(item.file_path), item.name, "--dry-run"]
+        if cross_filter:
+            cmd.extend(["--cross-filtering", cross_filter])
+        if is_active:
+            cmd.extend(["--is-active", is_active])
+
+        try:
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+            preview_window = tk.Toplevel(self)
+            preview_window.title("Dry Run Preview")
+            preview_window.geometry("800x600")
+            text = tk.Text(preview_window, wrap="word", font=("Consolas", 10))
+            text.pack(fill="both", expand=True, padx=8, pady=8)
+            text.insert("1.0", result.stdout)
+            text.configure(state="disabled")
+        except subprocess.CalledProcessError as exc:
+            messagebox.showerror("Erreur", f"Dry run échoué:\n{exc.stderr}")
 
     def _set_detail_text(self, text: str) -> None:
         self.detail.configure(state="normal")
