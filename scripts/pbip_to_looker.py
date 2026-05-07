@@ -183,14 +183,20 @@ def generate_looker_explore(tables: Set[str], relationships: List[Relationship])
     # Add joins for relationships
     for rel in relationships:
         if rel.from_table == primary_table and rel.to_table != primary_table:
-            join_name = rel.to_table.lower().replace(" ", "_")
-            lookml += f"""  join: {join_name} {{
-    type: left_outer
-    relationship: many_to_one
-    sql_on: ${{{{primary_table}}}.{rel.from_column} = ${{{join_name}}}.{rel.to_column} ;;
-  }}
-
-"""
+                        join_name = rel.to_table.lower().replace(" ", "_")
+                        # Build sql_on using literal LookML references like ${view_name}.column
+                        primary_view = primary_table.lower().replace(" ", "_")
+                        sql_on = "${" + primary_view + "}." + rel.from_column + " = ${" + join_name + "}." + rel.to_column + " ;;"
+                        lookml += (
+                                "  join: "
+                                + join_name
+                                + " {\n"
+                                + "    type: left_outer\n"
+                                + "    relationship: many_to_one\n"
+                                + "    sql_on: "
+                                + sql_on
+                                + "\n  }\n\n"
+                        )
     
     lookml += "}\n"
     return lookml
